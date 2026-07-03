@@ -6,14 +6,32 @@
 // 모터 동작을 위해 decideLineEscapeAction() 함수를 호출 
 // 반환된 ACTION 값을 본다.
 // ============================================================
-// 아날로그 사용 가정
-const int FRONT_LINE_PIN = A0;
-const int REAR_LINE_PIN  = A1;
-const int LEFT_LINE_PIN  = A2;
-const int RIGHT_LINE_PIN = A3;
+// 디지털 사용 가정
+const int FRONT_LINE_PIN = 2;
+const int REAR_LINE_PIN  = 3;
+const int LEFT_LINE_PIN  = 4;
+const int RIGHT_LINE_PIN = 5;
 
-//임계값 조정 필요
-const int LINE_THRESHOLD = 500;
+// 디지털 센서 기준: 감지되면 1, 감지 안 되면 0
+const int LINE_DETECTED_LEVEL = HIGH;
+
+// 같은 값이 이 시간 이상 유지되어야 실제 상태로 인정, 조절 가능
+const unsigned long LINE_STABLE_TIME_MS = 50;
+
+enum LineSensorIndex
+{
+    SENSOR_FRONT = 0,
+    SENSOR_REAR,
+    SENSOR_LEFT,
+    SENSOR_RIGHT,
+    SENSOR_COUNT
+};
+
+// 처음 시작은 경기장 안쪽 흰색이라고 가정
+// 흰색은 0, 라인 감지는 1로 초기 상태를 고정
+int lastRawLineState[SENSOR_COUNT] = {LOW, LOW, LOW, LOW};
+bool stableLineState[SENSOR_COUNT] = {false, false, false, false};
+unsigned long lastLineChangeTime[SENSOR_COUNT] = {0, 0, 0, 0};
 
 
 enum EscapeAction
@@ -33,17 +51,76 @@ enum EscapeAction
     ACTION_ESCAPE_EMERGENCY         // 판단이 애매한 경우, 긴급 탈출 또는 정지 필요
 };
 
+int getLineSensorIndex(int pin)
+{
+    if (pin == FRONT_LINE_PIN)
+    {
+        return SENSOR_FRONT;
+    }
+
+    if (pin == REAR_LINE_PIN)
+    {
+        return SENSOR_REAR;
+    }
+
+    if (pin == LEFT_LINE_PIN)
+    {
+        return SENSOR_LEFT;
+    }
+
+    if (pin == RIGHT_LINE_PIN)
+    {
+        return SENSOR_RIGHT;
+    }
+
+    return SENSOR_FRONT;
+}
+
+void initializeLineSensors()
+{
+    pinMode(FRONT_LINE_PIN, INPUT);
+    pinMode(REAR_LINE_PIN, INPUT);
+    pinMode(LEFT_LINE_PIN, INPUT);
+    pinMode(RIGHT_LINE_PIN, INPUT);
+
+    // 처음 시작은 경기장 안쪽 흰색이라고 가정
+    // 흰색은 0, 라인 감지는 1로 초기 상태를 고정
+    unsigned long now = millis();
+
+    for (int i = 0; i < SENSOR_COUNT; i++)
+    {
+        lastRawLineState[i] = LOW;
+        stableLineState[i] = false;
+        lastLineChangeTime[i] = now;
+    }
+}
+
 int readLineRaw(int pin)
 {
-    return analogRead(pin);
+    return digitalRead(pin);
 }
 
 
 bool isLineDetected(int pin)
 {
+    int sensorIndex = getLineSensorIndex(pin);
     int value = readLineRaw(pin);
+    unsigned long now = millis();
 
-    return value > LINE_THRESHOLD;
+    // 입력값이 바뀐 순간부터 유지 시간을 다시 측정
+    if (value != lastRawLineState[sensorIndex])
+    {
+        lastRawLineState[sensorIndex] = value;
+        lastLineChangeTime[sensorIndex] = now;
+    }
+
+    // 같은 값이 일정 시간 이상 유지되면 실제 상태로 인정
+    if (now - lastLineChangeTime[sensorIndex] >= LINE_STABLE_TIME_MS)
+    {
+        stableLineState[sensorIndex] = (value == LINE_DETECTED_LEVEL);
+    }
+
+    return stableLineState[sensorIndex];
 }
 
 
@@ -169,7 +246,7 @@ EscapeAction decideLineEscapeAction()
 
 
 // ============================================================
-// 아래는 디버깅 시리얼 모니터 출력용이다.
+// 아래는 디버깅 시리얼 모니터 출력용
 // ============================================================
 
 const char* escapeActionToText(EscapeAction action)
@@ -245,6 +322,8 @@ void printLineValues()
 void setup()
 {
     Serial.begin(115200);
+
+    initializeLineSensors();
 }
 
 void loop()
