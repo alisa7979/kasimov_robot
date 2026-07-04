@@ -1,18 +1,29 @@
 # kasimov_robot
 
 <pin numbers>
+
 - left  DC motor:
+
 - right DC motor:
+
 - left  UC sensor:
+
 - right UC sensor:
+
 - left  IR sensor:
+
 - right IR sensor:
+
 - left  front Line sensor:
+
 - right front Line sensor:
+
 - left  back  Line sensor:
+
 - right back  Line sensor:
-=======
+
 //sensing_simple.ino 같은 경우 각 센서의 측정값 raw만을 받아내는 코드로, 베이스코드일 뿐 활용 X//
+
 //Linetracer_sensing.ino, IR_sensing.ino는 각 센서의 측정값을 받아서 milis 사용하여 상태 유지를 측정하고, 이를 바탕으로 case를 정의함. 실제 main루프에서 활용//
 
 <IR_sensing.ino>
@@ -84,14 +95,23 @@ EscapeAction lineAction = decideLineEscapeAction();
 반환되는 값은 다음과 같다.
 
 ACTION_NO_LINE                  // 라인 감지 없음
+
 ACTION_ESCAPE_BACKWARD          // 앞쪽 라인 감지 -> 뒤로 탈출
+
 ACTION_ESCAPE_FORWARD           // 뒤쪽 라인 감지 -> 앞으로 탈출
+
 ACTION_ESCAPE_TURN_RIGHT        // 왼쪽 라인 감지 -> 오른쪽으로 탈출
+
 ACTION_ESCAPE_TURN_LEFT         // 오른쪽 라인 감지 -> 왼쪽으로 탈출
+
 ACTION_ESCAPE_BACKWARD_RIGHT    // 앞 + 왼쪽 라인 감지 -> 뒤 + 오른쪽 탈출
+
 ACTION_ESCAPE_BACKWARD_LEFT     // 앞 + 오른쪽 라인 감지 -> 뒤 + 왼쪽 탈출
+
 ACTION_ESCAPE_FORWARD_RIGHT     // 뒤 + 왼쪽 라인 감지 -> 앞 + 오른쪽 탈출
+
 ACTION_ESCAPE_FORWARD_LEFT      // 뒤 + 오른쪽 라인 감지 -> 앞 + 왼쪽 탈출
+
 ACTION_ESCAPE_EMERGENCY         // 판단이 애매한 경우
 
 예시:
