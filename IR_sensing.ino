@@ -14,6 +14,22 @@ const int RIGHT_IR_PIN = 3;
 
 const int IR_DETECTED_VALUE = HIGH; // 감지값이 0인지 1인지
 
+// 같은 값이 이 시간 이상 유지되어야 실제 상태로 인정. 조절 가능
+const unsigned long IR_STABLE_TIME_MS = 50;
+
+enum IrSensorIndex
+{
+    IR_SENSOR_LEFT = 0,
+    IR_SENSOR_RIGHT,
+    IR_SENSOR_COUNT
+};
+
+// 처음 시작은 측면 적 감지가 없다고 가정
+// 감지 없음은 0, 적 감지는 1로 초기 상태를 고정
+int lastRawIrState[IR_SENSOR_COUNT] = {LOW, LOW};
+bool stableIrState[IR_SENSOR_COUNT] = {false, false};
+unsigned long lastIrChangeTime[IR_SENSOR_COUNT] = {0, 0};
+
 
 // ============================================================
 // 모터에게 넘겨줄 적외선 감지 결과
@@ -27,6 +43,38 @@ enum IrTarget
     IR_TARGET_BOTH        // 좌우 둘 다 감지
 };
 
+int getIrSensorIndex(int pin)
+{
+    if (pin == LEFT_IR_PIN)
+    {
+        return IR_SENSOR_LEFT;
+    }
+
+    if (pin == RIGHT_IR_PIN)
+    {
+        return IR_SENSOR_RIGHT;
+    }
+
+    return IR_SENSOR_LEFT;
+}
+
+void initializeIrSensors()
+{
+    pinMode(LEFT_IR_PIN, INPUT);
+    pinMode(RIGHT_IR_PIN, INPUT);
+
+    // 처음 시작은 측면 적 감지가 없다고 가정
+    // 감지 없음은 0, 적 감지는 1로 초기 상태를 고정
+    unsigned long now = millis();
+
+    for (int i = 0; i < IR_SENSOR_COUNT; i++)
+    {
+        lastRawIrState[i] = LOW;
+        stableIrState[i] = false;
+        lastIrChangeTime[i] = now;
+    }
+}
+
 int readIrRaw(int pin)
 {
     return digitalRead(pin);
@@ -34,9 +82,24 @@ int readIrRaw(int pin)
 
 bool isIrDetected(int pin)
 {
+    int sensorIndex = getIrSensorIndex(pin);
     int value = readIrRaw(pin);
+    unsigned long now = millis();
 
-    return value == IR_DETECTED_VALUE;
+    // 입력값이 바뀐 순간부터 유지 시간을 다시 측정
+    if (value != lastRawIrState[sensorIndex])
+    {
+        lastRawIrState[sensorIndex] = value;
+        lastIrChangeTime[sensorIndex] = now;
+    }
+
+    // 같은 값이 일정 시간 이상 유지되면 실제 상태로 인정
+    if (now - lastIrChangeTime[sensorIndex] >= IR_STABLE_TIME_MS)
+    {
+        stableIrState[sensorIndex] = (value == IR_DETECTED_VALUE);
+    }
+
+    return stableIrState[sensorIndex];
 }
 
 
@@ -127,8 +190,7 @@ void setup()
 {
     Serial.begin(115200);
 
-    pinMode(LEFT_IR_PIN, INPUT);
-    pinMode(RIGHT_IR_PIN, INPUT);
+    initializeIrSensors();
 }
 
 void loop()
