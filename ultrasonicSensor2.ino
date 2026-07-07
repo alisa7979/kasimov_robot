@@ -42,7 +42,7 @@ int measureDistance(int trigPin, int echoPin)
 
     if (duration == 0)
     {
-        return US_MAX_RANGE_CM;
+        return -1;
     }
 
     return duration * 0.0343 / 2.0;
@@ -59,7 +59,7 @@ int detectFrontTarget()
     // 감지 범위 안에 상대가 없음
     if (!leftValid && !rightValid)
     {
-        return -1;
+        return US_MAX_RANGE_CM;
     }
 
     // 왼쪽 센서만 상대를 감지
