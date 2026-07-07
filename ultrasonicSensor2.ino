@@ -78,13 +78,13 @@ int detectFrontTarget()
     int distanceDiff = leftDistance - rightDistance;
 
     // 왼쪽 거리가 더 짧음 -> 상대가 왼쪽에 더 가까움
-    if (distanceDiff < 0  && distanceDiff > US_CENTER_THRESHOLD_CM)
+    if (distanceDiff < 0  && abs(istanceDiff) > US_CENTER_THRESHOLD_CM)
     {
         return distanceDiff;
     }
 
     // 오른쪽 거리가 더 짧음 -> 상대가 오른쪽에 더 가까움
-    if (distanceDiff > 0 && distanceDiff > US_CENTER_THRESHOLD_CM)
+    if (distanceDiff > 0 && abs(distanceDiff) > US_CENTER_THRESHOLD_CM)
     {
         return distanceDiff;
     }
