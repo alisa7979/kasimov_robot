@@ -143,3 +143,70 @@ else
     // 복합 탈출 또는 비상 처리
 }
 //
+
+
+
+4. 모터 사용
+
+메인 코드의 setup()에서 모터 초기화 함수를 한 번 호출해야 한다.
+
+    motorsInit();
+
+예시:
+
+    void setup() {
+        Serial.begin(115200);
+
+        initializeIrSensors();
+        initializeLineSensors();
+        initializeUltrasonicSensors();
+        motorsInit();
+    }
+
+메인 코드에서는 판단 결과(IR / 라인 / 초음파)에 따라 아래 이동 함수를 호출하면 된다.
+속도(speed)는 0~255 사이의 PWM 값이다.
+
+    motorsStop();            // 정지
+    driveForward(speed);     // 직진 전진
+    driveBackward(speed);    // 직진 후진
+    turnLeft(speed);         // 제자리 좌회전 (반시계)
+    turnRight(speed);        // 제자리 우회전 (시계)
+    forwardLeft(speed);      // 전진하면서 왼쪽으로 곡선
+    forwardRight(speed);     // 전진하면서 오른쪽으로 곡선
+    backwardLeft(speed);     // 후진하면서 왼쪽으로 곡선
+    backwardRight(speed);    // 후진하면서 오른쪽으로 곡선
+    tankDrive(left, right);  // 좌/우 바퀴 개별 제어 (-255~255), 저수준
+
+예시 (라인 탈출 동작을 모터로 연결):
+
+    EscapeAction lineAction = decideLineEscapeAction();
+
+    if (lineAction == ACTION_ESCAPE_BACKWARD) {
+        driveBackward(220);
+    } else if (lineAction == ACTION_ESCAPE_FORWARD) {
+        driveForward(220);
+    } else if (lineAction == ACTION_ESCAPE_TURN_RIGHT) {
+        turnRight(170);
+    } else if (lineAction == ACTION_ESCAPE_TURN_LEFT) {
+        turnLeft(170);
+    } else if (lineAction == ACTION_ESCAPE_BACKWARD_RIGHT) {
+        backwardRight(220);
+    } else if (lineAction == ACTION_ESCAPE_BACKWARD_LEFT) {
+        backwardLeft(220);
+    } else if (lineAction == ACTION_ESCAPE_FORWARD_RIGHT) {
+        forwardRight(220);
+    } else if (lineAction == ACTION_ESCAPE_FORWARD_LEFT) {
+        forwardLeft(220);
+    } else if (lineAction == ACTION_NO_LINE) {
+        // 기존 주행 전략 유지
+    } else {
+        turnRight(220); // ACTION_ESCAPE_EMERGENCY - 비상 회전
+    }
+
+예시 (측면 IR로 적 방향 추적):
+
+    IrTarget irTarget = detectIrTarget();
+
+    if (irTarget == IR_TARGET_LEFT)  turnLeft(170);
+    else if (irTarget == IR_TARGET_RIGHT) turnRight(170);
+    else if (irTarget == IR_TARGET_BOTH)  driveForward(180);
