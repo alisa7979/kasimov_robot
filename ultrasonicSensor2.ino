@@ -42,7 +42,7 @@ int measureDistance(int trigPin, int echoPin)
 
     if (duration == 0)
     {
-        return -1;
+        return US_MAX_RANGE_CM;
     }
 
     return duration * 0.0343 / 2.0;
