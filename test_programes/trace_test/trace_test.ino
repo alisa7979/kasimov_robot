@@ -8,7 +8,7 @@ const int MOTOR_LEFT_IN1 = 2;
 const int MOTOR_LEFT_IN2 = 4;       
 const int MOTOR_RIGHT_IN3 = 7;      
 const int MOTOR_RIGHT_IN4 = 8;      
-const int MOTOR_RIGHT_ENB = 5;      
+const int MOTOR_RIGHT_ENB = 5;
 
 // 초음파 센서 핀
 const int SONIC_LEFT_TRIG = 6;
