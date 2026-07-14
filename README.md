@@ -1,212 +1,48 @@
 # kasimov_robot
 
-<pin numbers>
+Firmware for an autonomous sumo robot, built for the KAsimov Cup competition (team 3조).
 
-- left  DC motor:
+- **Board:** Arduino Nano
+- **Motor driver:** L298N
+- **Motors:** 2x GM20-2025-12100 (12V, 2.5W spur gear DC)
+- **Sensing:** 2x front-facing HC-SR04 ultrasonic sensors, 4x corner-mounted line tracers
+- **Control:** Priority-cascade finite state machine — edge avoidance is the highest-priority state, overriding attack/search behavior whenever a line sensor trips
 
-- right DC motor:
+> Side IR sensors were part of an earlier design iteration and have since been removed — they caused false-attack events during testing. They no longer exist in the current hardware or firmware.
 
-- left  UC sensor:
+## Repo structure
 
-- right UC sensor:
+```
+kasimov_robot/
+├── main/
+│   ├── main_ver4.ino     ← current firmware, flash this
+│   ├── main_ver3.ino      (previous iteration, kept for reference)
+│   └── main_ver2.ino      (previous iteration, kept for reference)
+├── test/                  ← isolated per-subsystem test sketches
+│   ├── UC_test/            ultrasonic sensor read/filter tests
+│   ├── line_test/           line tracer threshold + edge detection tests
+│   ├── motor_test/          L298N driver / PWM sanity checks
+│   ├── trace_test/          combined line-tracer behavior tests
+│   ├── turn_test/            in-place turning / tank-drive tests
+│   └── main_ver1/            earliest full integration test
+└── archive/                retired code (old sensor approaches, deprecated modules)
+```
 
-- left  IR sensor:
+## Where to start
 
-- right IR sensor:
+- **Flashing the robot:** open `main/main_ver4.ino`. This is the only file that should be uploaded to the Nano.
+- **Understanding or debugging a subsystem:** check the matching folder under `test/` first. Each one isolates a single piece of hardware (ultrasonic, line tracers, motors, turning) so you can verify it in isolation before touching `main_ver4.ino`. These are the most reliable reference for how each sensor/actuator is actually wired and driven, since `main_ver4.ino` only calls into the behavior — it doesn't re-explain the low-level details.
+- **Old approaches (e.g. IR-based targeting, earlier ultrasonic filtering):** see `archive/`. Not used by current firmware.
 
-- left  front Line sensor:
+## FSM priority order (`main_ver4.ino`)
 
-- right front Line sensor:
+1. **Edge avoidance** — any of the 4 corner line tracers trips → immediate escape maneuver, overrides everything else.
+2. **Attack / opponent tracking** — front ultrasonic sensors detect an opponent within range.
+3. **Search** — no opponent detected, sweep/patrol behavior.
 
-- left  back  Line sensor:
+## Setup
 
-- right back  Line sensor:
-
-//sensing_simple.ino 같은 경우 각 센서의 측정값 raw만을 받아내는 코드로, 베이스코드일 뿐 활용 X//
-
-//Linetracer_sensing.ino, IR_sensing.ino는 각 센서의 측정값을 받아서 milis 사용하여 상태 유지를 측정하고, 이를 바탕으로 case를 정의함. 실제 main루프에서 활용//
-
-<IR_sensing.ino>
-좌/우 측면 HW-201 적외선 센서 감지
-적이 왼쪽, 오른쪽, 양쪽, 또는 없음 중 어디에 있는지 판단
-
-<Linetracer_sensing.ino>
-전/후/좌/우 라인트레이서 센서 감지
-경기장 라인을 밟았을 때 어느 방향으로 탈출해야 하는지 판단
-Main Code에서 호출해야 하는 함수
-
-1. 초기 설정
-
-메인 코드의 setup()에서 센서 초기화 함수를 한 번씩 호출해야 한다.
-
-initializeIrSensors();
-initializeLineSensors();
-
-예시:
-
-void setup()
-{
-    Serial.begin(115200);
-
-    initializeIrSensors();
-    initializeLineSensors();
-
-    // motor init 등 다른 초기화 코드
-}
-2. 측면 IR 센서 사용
-
-메인 코드에서는 detectIrTarget() 함수를 호출해서 적외선 센서 판단 결과를 받으면 된다.
-
-IrTarget irTarget = detectIrTarget();
-
-반환되는 값은 다음과 같다.
-
-IR_TARGET_NONE   // 측면 적 감지 없음
-IR_TARGET_LEFT   // 왼쪽에서 적 감지
-IR_TARGET_RIGHT  // 오른쪽에서 적 감지
-IR_TARGET_BOTH   // 좌우 둘 다 감지
-
-예시:
-
-IrTarget irTarget = detectIrTarget();
-
-if (irTarget == IR_TARGET_LEFT)
-{
-    // 왼쪽으로 회전 또는 왼쪽 적 추적
-}
-else if (irTarget == IR_TARGET_RIGHT)
-{
-    // 오른쪽으로 회전 또는 오른쪽 적 추적
-}
-else if (irTarget == IR_TARGET_BOTH)
-{
-    // 양쪽 감지 상황 처리
-}
-else
-{
-    // 측면 적 없음
-}
-3. 라인트레이서 센서 사용
-
-메인 코드에서는 decideLineEscapeAction() 함수를 호출해서 라인 감지 시 필요한 탈출 동작을 받으면 된다.
-
-EscapeAction lineAction = decideLineEscapeAction();
-
-반환되는 값은 다음과 같다.
-
-ACTION_NO_LINE                  // 라인 감지 없음
-
-ACTION_ESCAPE_BACKWARD          // 앞쪽 라인 감지 -> 뒤로 탈출
-
-ACTION_ESCAPE_FORWARD           // 뒤쪽 라인 감지 -> 앞으로 탈출
-
-ACTION_ESCAPE_TURN_RIGHT        // 왼쪽 라인 감지 -> 오른쪽으로 탈출
-
-ACTION_ESCAPE_TURN_LEFT         // 오른쪽 라인 감지 -> 왼쪽으로 탈출
-
-ACTION_ESCAPE_BACKWARD_RIGHT    // 앞 + 왼쪽 라인 감지 -> 뒤 + 오른쪽 탈출
-
-ACTION_ESCAPE_BACKWARD_LEFT     // 앞 + 오른쪽 라인 감지 -> 뒤 + 왼쪽 탈출
-
-ACTION_ESCAPE_FORWARD_RIGHT     // 뒤 + 왼쪽 라인 감지 -> 앞 + 오른쪽 탈출
-
-ACTION_ESCAPE_FORWARD_LEFT      // 뒤 + 오른쪽 라인 감지 -> 앞 + 왼쪽 탈출
-
-ACTION_ESCAPE_EMERGENCY         // 판단이 애매한 경우
-
-예시:
-
-EscapeAction lineAction = decideLineEscapeAction();
-
-if (lineAction == ACTION_ESCAPE_BACKWARD)
-{
-    // 후진
-}
-else if (lineAction == ACTION_ESCAPE_FORWARD)
-{
-    // 전진
-}
-else if (lineAction == ACTION_ESCAPE_TURN_RIGHT)
-{
-    // 오른쪽 회전
-}
-else if (lineAction == ACTION_ESCAPE_TURN_LEFT)
-{
-    // 왼쪽 회전
-}
-else if (lineAction == ACTION_NO_LINE)
-{
-    // 기존 주행 전략 유지
-}
-else
-{
-    // 복합 탈출 또는 비상 처리
-}
-//
-
-
-
-4. 모터 사용
-
-메인 코드의 setup()에서 모터 초기화 함수를 한 번 호출해야 한다.
-
-    motorsInit();
-
-예시:
-
-    void setup() {
-        Serial.begin(115200);
-
-        initializeIrSensors();
-        initializeLineSensors();
-        initializeUltrasonicSensors();
-        motorsInit();
-    }
-
-메인 코드에서는 판단 결과(IR / 라인 / 초음파)에 따라 아래 이동 함수를 호출하면 된다.
-속도(speed)는 0~255 사이의 PWM 값이다.
-
-    motorsStop();            // 정지
-    driveForward(speed);     // 직진 전진
-    driveBackward(speed);    // 직진 후진
-    turnLeft(speed);         // 제자리 좌회전 (반시계)
-    turnRight(speed);        // 제자리 우회전 (시계)
-    forwardLeft(speed);      // 전진하면서 왼쪽으로 곡선
-    forwardRight(speed);     // 전진하면서 오른쪽으로 곡선
-    backwardLeft(speed);     // 후진하면서 왼쪽으로 곡선
-    backwardRight(speed);    // 후진하면서 오른쪽으로 곡선
-    tankDrive(left, right);  // 좌/우 바퀴 개별 제어 (-255~255), 저수준
-
-예시 (라인 탈출 동작을 모터로 연결):
-
-    EscapeAction lineAction = decideLineEscapeAction();
-
-    if (lineAction == ACTION_ESCAPE_BACKWARD) {
-        driveBackward(220);
-    } else if (lineAction == ACTION_ESCAPE_FORWARD) {
-        driveForward(220);
-    } else if (lineAction == ACTION_ESCAPE_TURN_RIGHT) {
-        turnRight(170);
-    } else if (lineAction == ACTION_ESCAPE_TURN_LEFT) {
-        turnLeft(170);
-    } else if (lineAction == ACTION_ESCAPE_BACKWARD_RIGHT) {
-        backwardRight(220);
-    } else if (lineAction == ACTION_ESCAPE_BACKWARD_LEFT) {
-        backwardLeft(220);
-    } else if (lineAction == ACTION_ESCAPE_FORWARD_RIGHT) {
-        forwardRight(220);
-    } else if (lineAction == ACTION_ESCAPE_FORWARD_LEFT) {
-        forwardLeft(220);
-    } else if (lineAction == ACTION_NO_LINE) {
-        // 기존 주행 전략 유지
-    } else {
-        turnRight(220); // ACTION_ESCAPE_EMERGENCY - 비상 회전
-    }
-
-예시 (측면 IR로 적 방향 추적):
-
-    IrTarget irTarget = detectIrTarget();
-
-    if (irTarget == IR_TARGET_LEFT)  turnLeft(170);
-    else if (irTarget == IR_TARGET_RIGHT) turnRight(170);
-    else if (irTarget == IR_TARGET_BOTH)  driveForward(180);
+1. Open `main/main_ver4.ino` in the Arduino IDE.
+2. Verify pin mapping matches your wiring (see comments at top of file / corresponding `test/` sketch for each sensor).
+3. Upload to Arduino Nano.
+4. If behavior looks off, isolate the issue using the relevant `test/` sketch before debugging in `main_ver4.ino`.
