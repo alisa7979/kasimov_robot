@@ -2,7 +2,7 @@
 
 Firmware for an autonomous sumo robot, built for the KAsimov Cup competition (team 3조).
 
-- **Board:** Arduino Nano
+- **Board:** Arduino Uno
 - **Motor driver:** L298N
 - **Motors:** 2x GM20-2025-12100 (12V, 2.5W spur gear DC)
 - **Sensing:** 2x front-facing HC-SR04 ultrasonic sensors, 4x corner-mounted line tracers
@@ -30,7 +30,7 @@ kasimov_robot/
 
 ## Where to start
 
-- **Flashing the robot:** open `main/main_ver4.ino`. This is the only file that should be uploaded to the Nano.
+- **Flashing the robot:** open `main/main_ver4.ino`. This is the only file that should be uploaded to the Uno.
 - **Understanding or debugging a subsystem:** check the matching folder under `test/` first. Each one isolates a single piece of hardware (ultrasonic, line tracers, motors, turning) so you can verify it in isolation before touching `main_ver4.ino`. These are the most reliable reference for how each sensor/actuator is actually wired and driven, since `main_ver4.ino` only calls into the behavior — it doesn't re-explain the low-level details.
 - **Old approaches (e.g. IR-based targeting, earlier ultrasonic filtering):** see `archive/`. Not used by current firmware.
 
